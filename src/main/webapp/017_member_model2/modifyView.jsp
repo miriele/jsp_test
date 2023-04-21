@@ -14,7 +14,7 @@
 int result	= (Integer)request.getAttribute("result");
 
 if(result == 0) {
-	// 비밀번호가 다르다
+	// 비밀번호가 다르다 : 
 	%>
 	<script type="text/javascript">
 		// <!--
