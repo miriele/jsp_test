@@ -8,20 +8,8 @@
 <h2><%=page_modify%></h2>
 
 <%
-request.setCharacterEncoding("utf-8");
-%>
-
-<jsp:useBean id="dto" class="board.BoardDataBean"/>
-	<jsp:setProperty name="dto" property="*"/>
-	<!-- num subject content passwd -->
-	
-<%
-String	pageNum	= request.getParameter("pageNum");
-%>
-
-<%
-BoardDBBean	dao		= BoardDBBean.getInstance();
-int			result	= dao.modifyArticle(dto);
+int		result	= (Integer)request.getAttribute("result");
+String	pageNum	= (String)request.getAttribute("pageNum");
 
 if(result == 0) {
 	// 수정 실패
@@ -31,11 +19,11 @@ if(result == 0) {
 		alert(modifyerror);
 	// -->
 	</script>
-	<meta http-equiv="refresh" content="0; url=list.jsp?pageNum=<%=pageNum%>">
+	<meta http-equiv="refresh" content="0; url=board_list.do?pageNum=<%=pageNum%>">
 	<%
 } else {
 	// 수정 성공
-	response.sendRedirect("list.jsp?pageNum=" + pageNum);
+	response.sendRedirect("board_list.do?pageNum=" + pageNum);
 }
 %>
 
