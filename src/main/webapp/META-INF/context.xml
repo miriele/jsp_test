@@ -4,10 +4,10 @@
 <context>
 	<Resource
 		name			= "jdbc/bit"
-		auth			= "Container"						
-		type			= "javax.sql.DataSource"				
+		auth			= "Container"
+		type			= "javax.sql.DataSource"
 		driverClassName	= "oracle.jdbc.driver.OracleDriver"
-		loginTimeout	= "10"		
+		loginTimeout	= "10"
 		maxWait			= "5000"
 		username		= "bit"
 		password		= "bit"

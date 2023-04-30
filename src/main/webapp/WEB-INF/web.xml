@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="https://jakarta.ee/xml/ns/jakartaee" xmlns:web="http://xmlns.jcp.org/xml/ns/javaee" xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_5_0.xsd http://xmlns.jcp.org/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" id="WebApp_ID" version="5.0">
-  <display-name>jsp</display-name>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://xmlns.jcp.org/xml/ns/javaee" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd" id="WebApp_ID" version="4.0">
+  <display-name>myboard</display-name>
   <welcome-file-list>
     <welcome-file>index.html</welcome-file>
     <welcome-file>index.jsp</welcome-file>
@@ -9,63 +9,18 @@
     <welcome-file>default.jsp</welcome-file>
     <welcome-file>default.htm</welcome-file>
   </welcome-file-list>
-  
-  <!-- http://localhost:8080/jsp/hello -->
-  <servlet>
-  	<servlet-name>HelloServlet_001</servlet-name>
-  	<servlet-class>study.HelloServlet_001</servlet-class>
-  </servlet>
-  <servlet-mapping>
-  	<servlet-name>HelloServlet_001</servlet-name>
-  	<url-pattern>/hello</url-pattern>
-  </servlet-mapping>
 
-  <!-- http://localhost:8080/jsp/person -->
+  <!-- http://localhost:8080/myboard/*.do -->
   <servlet>
-  	<servlet-name>PersonServlet_002</servlet-name>
-  	<servlet-class>study.PersonServlet_002</servlet-class>
-  </servlet>
-  <servlet-mapping>
-  	<servlet-name>PersonServlet_002</servlet-name>
-  	<url-pattern>/person</url-pattern>
-  </servlet-mapping>
-  
-  <!-- http://localhost:8080/mvc/simple -->
-  <servlet>
-  	<servlet-name>SimpleController</servlet-name>
-  	<!-- [servlet mvc model 2 - 회원관리/게시판] 하면서 servlet-class 바꿈 -->
-  	<!-- <servlet-class>mvc.SimpleController</servlet-class> -->
+  	<servlet-name>MyBoardController</servlet-name>
   	<servlet-class>control.Controller</servlet-class>
   	<init-param>
   		<param-name>configFile</param-name>
-  		<param-value>/WEB-INF/handler.properties</param-value>
+  		<param-value>WEB-INF/myboard.properties</param-value>
   	</init-param>
   </servlet>
   <servlet-mapping>
-  	<servlet-name>SimpleController</servlet-name>
-  	<!-- [방법4] 에서 url-pattern 바꿈 : /simple to *.do -->
-  	<!-- <url-pattern>/simple</url-pattern> -->
+  	<servlet-name>MyBoardController</servlet-name>
   	<url-pattern>*.do</url-pattern>
   </servlet-mapping>
-  
-  <!-- 004_innerobject - application - context -->
-  <context-param>
-    <param-name>level</param-name>
-    <param-value>5</param-value>
-  </context-param>
-  <context-param>
-    <param-name>debug</param-name>
-    <param-value>A</param-value>
-  </context-param>
-
-  <!-- 006_module - application - context -->
-  <error-page>
-  	<error-code>404</error-code>
-  	<location>/007_error/404code.jsp</location>
-  </error-page>
-  <error-page>
-  	<error-code>500</error-code>
-  	<location>/007_error/500code.jsp</location>
-  </error-page>
-
 </web-app>

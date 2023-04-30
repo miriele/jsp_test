@@ -16,7 +16,8 @@ public class BoardModifyFormHandler implements CommandHandler {
 		request.setAttribute("num", num);
 		request.setAttribute("pageNum", pageNum);
 
-		return "/018_board_model2/modifyForm.jsp";
+//		return "/018_board_model2/modifyForm.jsp";
+		return "/022_board_jstl/modifyForm.jsp";
 	}
 
 }

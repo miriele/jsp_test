@@ -13,6 +13,9 @@ import javax.sql.DataSource;
 
 public class BoardDBBean {
 	private static BoardDBBean	instance	= new BoardDBBean();
+	private static final int	e_normal	= 0;	// 일반글
+	private static final int	e_noti		= 1;	// 공지글 : notice
+	private static final int	e_rec		= 2;	// 추천글 : recommend
 	
 	public static BoardDBBean	getInstance() {
 		return instance;
@@ -26,21 +29,30 @@ public class BoardDBBean {
 		return ds.getConnection();
 	}
 	
-	public int getCount() {
+	public int getCount(int type) {
 		int					count	= 0;
 		Connection			con		= null;
 		PreparedStatement	pstmt	= null;
 		ResultSet			rs		= null;
 		
 		try {
-			String	sql	= "select count(*) from board";
+			// 공지글과 추천글은 따로 출력할 것이므로, count에 포함시키지 않는다
+			String	sql	= "select count(*) from board_m1 ";
+			
+			if(type == e_normal) {
+				sql 	+=	"where header != 1 and header != 2";
+			} else if(type == e_noti) {
+				sql 	+=	"where header = 1";
+			} else if(type == e_rec) {
+				sql 	+=	"where header = 2";
+			}
 
 			con		= getConnection();
 			pstmt	= con.prepareStatement(sql);
 			rs		= pstmt.executeQuery();
 			
 			// 주의
-			// : "select count(*) from board" 로 queyr하면 column 명이 count(*)이 된다
+			// : "select count(*) from board_m1" 로 queyr하면 column 명이 count(*)이 된다
 			// : 따라서 값을 얻어오려면 getInt("count(*)")와 같이 작성해야 한다
 			// : 만약 query문에 수식이 있다면 수식을 다 써줘야 한다
 			// : 이렇게 사용하면 불편하므로, column명 대신 index를 사용하는 방법을 사용할 수 있다
@@ -75,7 +87,7 @@ public class BoardDBBean {
 		try {
 			String	sql			= null;
 			int		num			= dto.getNum();			// 0 : 제목글, != 0 : 답변글
-			int		ref			= dto.getRef();			// 그룹화아이디
+			int		re_num		= dto.getRe_num();		// 그룹화아이디
 			int		re_step		= dto.getRe_step();		// 글순서
 			int		re_level	= dto.getRe_level();	// 글레벨
 			
@@ -83,16 +95,16 @@ public class BoardDBBean {
 
 			if(num == 0) {
 				// 제목글인 경우
-				sql		= "select max(num) from board";
+				sql		= "select max(num) from board_m1";
 				pstmt	= con.prepareStatement(sql);
 				rs		= pstmt.executeQuery();
 				
 				if(rs.next()) {
 					// 글이 있는 경우
-					ref	= rs.getInt(1) + 1;		// 그룹화아이디 = 글번호최댓값 + 1
+					re_num	= rs.getInt(1) + 1;		// 그룹화아이디 = 글번호최댓값 + 1
 				} else {
 					// 글이 없는 경우
-					ref	= 1;
+					re_num	= 1;
 				}
 				
 				re_step		= 0;
@@ -103,21 +115,21 @@ public class BoardDBBean {
 			} else {
 				// 답변글인 경우
 				
-				//						ref		re_step		re_level
+				//						re_num	re_step		re_level
 				// 제목글				12		0			0
 				//  ㄴ 답글				12		0+1+1		0+1		
 				//      ㄴ 재답글		12		1+1+1		1+1
 				//  ㄴ 나중답글			12		0+1			0+1			// re_step을 1 증가하기 전에 현재 글보다 빠른 re_step은 1씩 밀어준다
 				
-				//						ref		re_step		re_level
+				//						re_num	re_step		re_level
 				// 제목글				12		0			0
 				//  ㄴ 나중답글			12		0+1			0+1
 				//  ㄴ 답글				12		0+1+1		0+1		
 				//      ㄴ 재답글		12		1+1+1		1+1
 				
-				sql		= "update board set re_step=re_step+1 where ref=? and re_step>?";
+				sql		= "update board_m1 set re_step=re_step+1 where ref=? and re_step>?";
 				pstmt	= con.prepareStatement(sql);
-				pstmt.setInt( 1, ref);
+				pstmt.setInt( 1, re_num);
 				pstmt.setInt( 2, re_step);
 				pstmt.executeUpdate();
 
@@ -127,18 +139,18 @@ public class BoardDBBean {
 				pstmt.close();
 			}
 
-			sql		= "insert into board(num, writer, subject, passwd, reg_date, "
-					+ 					"ref, re_step, re_level, content, ip) "
-					+ "values(board_seq.NEXTVAL, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+			sql		= "insert into board_m1(num, id, header, subject, reg_date, "
+					+ 					"content, re_num, re_step, re_level, ip) "
+					+ "values(board_m1_seq.NEXTVAL, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 			pstmt	= con.prepareStatement(sql);
-			pstmt.setString		( 1, dto.getWriter());
-			pstmt.setString		( 2, dto.getSubject());
-			pstmt.setString		( 3, dto.getPasswd());
+			pstmt.setString		( 1, dto.getId());
+			pstmt.setInt		( 2, dto.getHeader());
+			pstmt.setString		( 3, dto.getSubject());
 			pstmt.setTimestamp	( 4, dto.getReg_date());
-			pstmt.setInt		( 5, ref);
-			pstmt.setInt		( 6, re_step);
-			pstmt.setInt		( 7, re_level);
-			pstmt.setString		( 8, dto.getContent());
+			pstmt.setString		( 5, dto.getContent());
+			pstmt.setInt		( 6, re_num);
+			pstmt.setInt		( 7, re_step);
+			pstmt.setInt		( 8, re_level);
 			pstmt.setString		( 9, dto.getIp());
 			
 			result	= pstmt.executeUpdate();
@@ -158,7 +170,7 @@ public class BoardDBBean {
 		return result;
 	}	// insertArticle()
 
-	public ArrayList<BoardDataBean> getArticles(int start, int end) {
+	public ArrayList<BoardDataBean> getArticles(int start, int end, int type) {
 		ArrayList<BoardDataBean>	dtos	= null;
 		
 		Connection			con		= null;
@@ -166,18 +178,59 @@ public class BoardDBBean {
 		ResultSet			rs		= null;
 		
 		try {
-			String	sql	= "select num, writer, subject, passwd,";
-			sql += "reg_date, ref, re_step, re_level, content, ip, readcount, r ";
-			sql += "from (select num, writer, subject, passwd,reg_date,ref,re_step";
-			sql += ",re_level,content,ip,readcount,rownum r from ";
-			sql += "(select num,writer,subject,passwd,reg_date,ref,re_step,re_level ";
-			sql += ",content,ip,readcount from board order by ref desc, re_step asc) ";
-			sql += "order by ref desc, re_step asc ) where r >= ? and r <= ?";
+			/*
+			select num, id, header, subject, reg_date, readcount, likecount,
+			       content, re_num, re_step, re_level, ip, nick, r
+			from
+			    (select num, id, header, subject, reg_date, readcount, likecount,
+			            content, re_num, re_step, re_level, ip, nick, rownum r
+			    from
+			        (select num, b.id, header, subject, b.reg_date, readcount, likecount,
+			            content, re_num, re_step, re_level, ip, nick
+			        from board_m1 b, member_m1 m
+			        where   b.id = m.id
+			            and b.header != 1
+			            and b.header != 2
+			        order by re_num desc, re_step asc)
+			    order by re_num desc, re_step asc)
+			where r >= 1 and r <= 9;
+			*/
+
+			String	sql =
+					"select num, id, header, subject, reg_date, readcount, likecount, ";
+			sql +=			"content, re_num, re_step, re_level, ip, nick, r ";
+			sql +=	"from ";
+			sql +=		"(select num, id, header, subject, reg_date, readcount, likecount, ";
+			sql +=				"content, re_num, re_step, re_level, ip, nick, rownum r ";
+			sql +=		"from ";
+			sql +=			"(select num, b.id, header, subject, b.reg_date, readcount, likecount, ";
+			sql +=					"content, re_num, re_step, re_level, ip, nick ";
+			sql +=			"from board_m1 b, member_m1 m ";
+			sql	+=			"where   b.id = m.id ";
+
+			if(type == e_normal) {
+				sql +=				"and b.header != 1 ";
+				sql +=				"and b.header != 2 ";
+			} else if(type == e_noti) {
+				sql +=				"and b.header = 1 ";
+			} else if(type == e_rec) {
+				sql +=				"and b.header = 2 ";
+			}
+
+			sql +=			"order by re_num desc, re_step asc) ";
+			sql +=		"order by re_num desc, re_step asc) ";
+
+			if(type == e_normal) {
+				sql +=	"where r >= ? and r <= ?";
+			}
 
 			con		= getConnection();
 			pstmt	= con.prepareStatement(sql);
-			pstmt.setInt(1, start);
-			pstmt.setInt(2, end);
+			
+			if(type == e_normal) {
+				pstmt.setInt(1, start);
+				pstmt.setInt(2, end);
+			}
 			
 			rs		= pstmt.executeQuery();
 			
@@ -188,16 +241,18 @@ public class BoardDBBean {
 					BoardDataBean	dto	= new BoardDataBean();
 					
 					dto.setNum		(rs.getInt("num"));
-					dto.setWriter	(rs.getString("writer"));
+					dto.setId		(rs.getString("id"));
+					dto.setHeader	(rs.getInt("header"));
 					dto.setSubject	(rs.getString("subject"));
-					dto.setPasswd	(rs.getString("passwd"));
 					dto.setReg_date	(rs.getTimestamp("reg_date"));
 					dto.setReadcount(rs.getInt("readcount"));
-					dto.setRef		(rs.getInt("ref"));
+					dto.setLikecount(rs.getInt("likecount"));
+					dto.setContent	(rs.getString("content"));
+					dto.setRe_num	(rs.getInt("re_num"));
 					dto.setRe_step	(rs.getInt("re_step"));
 					dto.setRe_level	(rs.getInt("re_level"));
-					dto.setContent	(rs.getString("content"));
 					dto.setIp		(rs.getString("ip"));
+					dto.setNick		(rs.getString("nick"));
 					
 					dtos.add(dto);
 				} while(rs.next());
@@ -226,7 +281,7 @@ public class BoardDBBean {
 		ResultSet			rs		= null;
 		
 		try {
-			String	sql	= "select * from board where num=?";
+			String	sql	= "select * from board_m1 where num=?";
 			
 			con		= getConnection();
 			pstmt	= con.prepareStatement(sql);
@@ -238,15 +293,16 @@ public class BoardDBBean {
 				dto = new BoardDataBean();
 
 				dto.setNum		(rs.getInt("num"));
-				dto.setWriter	(rs.getString("writer"));
+				dto.setId		(rs.getString("id"));
+				dto.setHeader	(rs.getInt("header"));
 				dto.setSubject	(rs.getString("subject"));
-				dto.setPasswd	(rs.getString("passwd"));
 				dto.setReg_date	(rs.getTimestamp("reg_date"));
 				dto.setReadcount(rs.getInt("readcount"));
-				dto.setRef		(rs.getInt("ref"));
+				dto.setLikecount(rs.getInt("likecount"));
+				dto.setContent	(rs.getString("content"));
+				dto.setRe_num	(rs.getInt("re_num"));
 				dto.setRe_step	(rs.getInt("re_step"));
 				dto.setRe_level	(rs.getInt("re_level"));
-				dto.setContent	(rs.getString("content"));
 				dto.setIp		(rs.getString("ip"));
 			}
 		} catch (NamingException e) {
@@ -271,7 +327,7 @@ public class BoardDBBean {
 		PreparedStatement	pstmt	= null;
 		
 		try {
-			String	sql	= "update board set readcount=readcount+1 where num=?";
+			String	sql	= "update board_m1 set readcount=readcount+1 where num=?";
 
 			con		= getConnection();
 			pstmt	= con.prepareStatement(sql);
@@ -293,15 +349,15 @@ public class BoardDBBean {
 		}
 	}	// addCount()
 
-	public int checkPasswd(int num, String passwd) {
+	public int checkId(int num, String id) {
 		int				result	= 0;
 		BoardDataBean	dto		= getArticle(num);
 		
-		if(passwd.equals(dto.getPasswd())) {
-			// 비밀번호가 같다
+		if(id.equals(dto.getId())) {
+			// 아이디가 같다
 			result = 1;
 		} else {
-			// 비밀번호가 다르다
+			// 아이디가 다르다
 			result = 0;
 		}
 		
@@ -339,11 +395,11 @@ public class BoardDBBean {
 
 		try {
 			BoardDataBean	dto			= getArticle(num);
-			int				ref			= dto.getRef();
+			int				ref			= dto.getRe_num();
 			int				re_step		= dto.getRe_step();
 			int				re_level	= dto.getRe_level();
 
-			String	sql	= "select * from board where ref=? and re_step=?+1 and re_level>?";
+			String	sql	= "select * from board_m1 where ref=? and re_step=?+1 and re_level>?";
 			
 			con		= getConnection();
 			pstmt	= con.prepareStatement(sql);
@@ -359,14 +415,14 @@ public class BoardDBBean {
 				// 답글이 없다
 				pstmt.close();
 				
-				sql		= "update board set re_step=re_step-1 where ref=? and re_step>?";
+				sql		= "update board_m1 set re_step=re_step-1 where ref=? and re_step>?";
 				pstmt	= con.prepareStatement(sql);
 				pstmt.setInt(1, ref);
 				pstmt.setInt(2, re_step);
 				result	= pstmt.executeUpdate();
 
 				pstmt.close();
-				sql		= "delete from board where num=?";
+				sql		= "delete from board_m1 where num=?";
 				pstmt	= con.prepareStatement(sql);
 				pstmt.setInt(1, num);
 				result	= pstmt.executeUpdate();
@@ -394,14 +450,13 @@ public class BoardDBBean {
 		PreparedStatement	pstmt	= null;
 		
 		try {
-			String	sql	= "update board set subject=?, content=?, passwd=? where num=?";
+			String	sql	= "update board_m1 set subject=?, content=? where num=?";
 
 			con		= getConnection();
 			pstmt	= con.prepareStatement(sql);
 			pstmt.setString	(1, dto.getSubject());
 			pstmt.setString	(2, dto.getContent());
-			pstmt.setString	(3, dto.getPasswd());
-			pstmt.setInt	(4, dto.getNum());
+			pstmt.setInt	(3, dto.getNum());
 			result	= pstmt.executeUpdate();
 		} catch (NamingException e) {
 			e.printStackTrace();
@@ -418,13 +473,5 @@ public class BoardDBBean {
 		
 		return result;
 	}
-
-
-
-
-
-
-
-
 
 }	// BoardDBBean class
